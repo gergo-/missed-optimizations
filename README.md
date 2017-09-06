@@ -306,7 +306,7 @@ int fn2(int p1) {
 
 These functions should be compiled identically. The condition is equivalent
 to `6 * 12 <= p1 < 7 * 12`, and the two signed comparisons can be replaced
-by a single unsigned comparison:
+by a subtraction and a single unsigned comparison:
 
 ```
     sub r0, r0, #72
@@ -484,7 +484,7 @@ Patch submitted: https://reviews.llvm.org/D35911
 
 ```
 void fn1(int r0) {
-  if (r0 + 1)
+  if (r0 + 42)
     0;
 }
 ```
@@ -643,7 +643,7 @@ from the previously folded `mla` operation. Such constants are not
 propagated by the "constant propagation" (in reality, only local folding)
 pass. Values are only propagated by the value analysis that runs before, but
 for technical reasons the value analysis cannot currently take advantage of
-the algebraic properties of operator's neutral and zero elements.
+the algebraic properties of operators' neutral and zero elements.
 
 ### Missed reassociation and folding of constants
 
