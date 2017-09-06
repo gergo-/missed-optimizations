@@ -6,11 +6,11 @@ such things, and people may not have bothered to write these up before). I
 have reported some of these in bug trackers and/or developed more or less
 mature patches for some; see links below.
 
-These are *not* correctness bugs, only cases where a compiler might generate
-simpler or otherwise (seemingly) more efficient code. None of these are
-likely to affect the actual, measurable performance of real applications.
-Also, I have not measured most of these: The seemingly inefficient code may
-somehow turn out to be faster on real hardware.
+These are *not* correctness bugs, only cases where a compiler misses an
+opportunity to generate simpler or otherwise (seemingly) more efficient
+code. None of these are likely to affect the actual, measurable performance
+of real applications. Also, I have not measured most of these: The seemingly
+inefficient code may somehow turn out to be faster on real hardware.
 
 I have tested GCC, Clang, and CompCert, mostly targeting ARM at `-O3`.
 Unless noted otherwise, the examples below can be reproduced with the
@@ -125,7 +125,7 @@ int fn5(int p1, int p2) {
 
 GCC converts `a` to double and back as above, but the result must be the
 same as simply multiplying by the integer 10. Clang realizes this and
-removes all floating-point operations from this function.
+generates an integer multiply, removing all floating-point operations.
 
 ### Dead store for `int` to `double` conversion
 
@@ -250,8 +250,8 @@ double fn1(double *p1) {
 
 This function returns 0 if `N` is 0 or negative; otherwise, it returns
 `p1[N-1]`. GCC compiles it as such on ARM (with no loop), but on x86-64, it
-generates a complex, unrolled loop. The code is too long and boring to here,
-but on trunk it's similar to https://godbolt.org/g/RYwgq4.
+generates a complex unrolled loop. The code is too long and boring to show
+here, but it's similar enough to https://godbolt.org/g/RYwgq4.
 
 ### Unnecessary spilling due to badly scheduled move-immediates
 
@@ -339,8 +339,8 @@ On ARM, integer division is turned into a function call:
     pop {r4, pc}
 ```
 
-GCC allocates a stack frame, not realizing that this call in tail position
-could be simply
+In the code above, GCC allocates a stack frame, not realizing that this call
+in tail position could be simply
 ```
     b   __aeabi_idiv
 ```
@@ -412,8 +412,9 @@ int fn4(int p4, int p5) {
 }
 ```
 
-The first function returns `q`, the others return 0, 4, and 5, respectively.
-Clang evaluates at least one division or modulo operation in each case.
+The first function always returns `q`, the others always return 0, 4, and 5,
+respectively. Clang evaluates at least one division or modulo operation in
+each case.
 
 (I have a *lot* more examples like this, but this list is boring enough as
 it is.)
@@ -615,13 +616,13 @@ program:
     orr r0, r1, r12
 ```
 
-The value of `v` is never used; this assignment is dead code. It
-should not affect register allocation.
+The value of `v` is never used. This assignment is dead code, and it is
+compiled away. It should not affect register allocation.
 
 ### Missed register coalescing
 
 In the previous example, the copies for the arguments to the `mul` operation
-(`r0` to `r1`, then on to `r2`) are redundant. They should be removed, and
+(`r0` to `r1`, then on to `r2`) are redundant. They could be removed, and
 the multiplication written as just `mul r1, r0, r0`.
 
 ### Failure to propagate folded constants
