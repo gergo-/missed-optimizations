@@ -28,6 +28,9 @@ Clang) produces the "right" code.
 This list was put together by Gergö Barany <gergo.barany@inria.fr>. I'm
 interested in feedback.
 
+Since initial publication, there have been some insightful comments on this
+list [on Reddit](https://www.reddit.com/r/programming/comments/6ylrpi/missed_optimizations_in_c_compilers/)
+and [on Hacker News](https://news.ycombinator.com/item?id=15187505).
 
 ## GCC
 
@@ -83,6 +86,24 @@ possibly truncating to `char`'s range). Same for `double` instead of
 
 Reported at https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80861.
 
+If you are worried about the conversion overflowing, you might prefer this
+version:
+
+```
+#include <math.h>
+#include <limits.h>
+
+char fn1(float p1) {
+  if (isfinite(p1) && CHAR_MIN <= p1 && p1 <= CHAR_MAX) {
+    return (char) p1;
+  }
+  return 0;
+}
+```
+
+GCC still goes through memory to perform the zero extension.
+
+
 ### Spill instead of register copy
 
 ```
@@ -126,6 +147,24 @@ int fn5(int p1, int p2) {
 GCC converts `a` to double and back as above, but the result must be the
 same as simply multiplying by the integer 10. Clang realizes this and
 generates an integer multiply, removing all floating-point operations.
+
+If you are worried about the multiplication overflowing, you might prefer
+this version:
+
+```
+#include <limits.h>
+
+int N;
+int fn5(int p1, int p2) {
+  int a = p2;
+  if (N && INT_MIN / 10.0 <= a && a <= INT_MAX / 10.0)
+    a *= 10.0;
+  return a;
+}
+```
+
+Clang still generates code for multiplying integers, while GCC multiplies as
+`double`.
 
 ### Dead store for `int` to `double` conversion
 
