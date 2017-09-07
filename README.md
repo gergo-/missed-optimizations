@@ -409,6 +409,9 @@ so the function's result is always 0. Clang doesn't realize this and
 generates code to compute the result. (It does optimize corresponding cases
 for unsigned `short` and `char`.)
 
+A report with this and all the other range analysis examples below was filed
+by @gnzlbg at https://bugs.llvm.org/show_bug.cgi?id=34517.
+
 ### More incomplete range analysis
 
 ```
