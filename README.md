@@ -32,6 +32,11 @@ Since initial publication, there have been some insightful comments on this
 list [on Reddit](https://www.reddit.com/r/programming/comments/6ylrpi/missed_optimizations_in_c_compilers/)
 and [on Hacker News](https://news.ycombinator.com/item?id=15187505).
 
+I have described how I found these in a [preprint
+(PDF)](missed_optimizations_preprint.pdf). The software described in the
+paper is not released yet.
+
+
 ## GCC
 
 ### Useless initialization of struct passed by value
@@ -411,7 +416,7 @@ for unsigned `short` and `char`.)
 
 A report with this and all the other range analysis examples below was filed
 by [@gnzlbg](https://github.com/gnzlbg) at
-https://bugs.llvm.org/show_bug.cgi?id=34517.
+https://bugs.llvm.org/show_bug.cgi?id=34517, and most cases have been fixed.
 
 ### More incomplete range analysis
 
@@ -494,7 +499,7 @@ conversion operation (`vcvt`) for each use of `i`:
 Several times, the result of the conversion is written into the register
 that already holds that same value (`s2`).
 
-Reported at https://bugs.llvm.org/show_bug.cgi?id=33199.
+Reported at https://bugs.llvm.org/show_bug.cgi?id=33199, fixed.
 
 ### Missing instruction selection pattern for `vnmla`
 
