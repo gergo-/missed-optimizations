@@ -293,9 +293,15 @@ double fn1(double *p1) {
 ```
 
 This function returns 0 if `N` is 0 or negative; otherwise, it returns
-`p1[N-1]`. GCC compiles it as such on ARM (with no loop), but on x86-64, it
-generates a complex unrolled loop. The code is too long and boring to show
-here, but it's similar enough to https://godbolt.org/g/RYwgq4.
+`p1[N-1]`. On x86-64, GCC generates a complex unrolled loop (and a simpler
+loop on ARM). Clang removes the loop and replaces it by a simple branch.
+GCC's code is too long and boring to show here, but it's similar enough to
+https://godbolt.org/g/RYwgq4.
+
+Note: An earlier version of this document claimed that GCC also removed the
+loop on ARM. It was pointed out to me that this claim was false, GCC does
+generate a loop on ARM too. My (stupid) mistake, I had misread the assembly
+code.
 
 ### Unnecessary spilling due to badly scheduled move-immediates
 
