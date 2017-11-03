@@ -293,9 +293,15 @@ double fn1(double *p1) {
 ```
 
 This function returns 0 if `N` is 0 or negative; otherwise, it returns
-`p1[N-1]`. GCC compiles it as such on ARM (with no loop), but on x86-64, it
-generates a complex unrolled loop. The code is too long and boring to show
-here, but it's similar enough to https://godbolt.org/g/RYwgq4.
+`p1[N-1]`. On x86-64, GCC generates a complex unrolled loop (and a simpler
+loop on ARM). Clang removes the loop and replaces it by a simple branch.
+GCC's code is too long and boring to show here, but it's similar enough to
+https://godbolt.org/g/RYwgq4.
+
+*Note:* An earlier version of this document claimed that GCC also removed the
+loop on ARM. It was pointed out to me that this claim was false, GCC does
+generate a loop on ARM too. My (stupid) mistake, I had misread the assembly
+code.
 
 ### Unnecessary spilling due to badly scheduled move-immediates
 
@@ -547,6 +553,10 @@ computation for its condition remains in the generated code:
 This appears to be because dead code elimination runs before useless
 branches are identified and eliminated.
 
+Fixed in
+https://github.com/AbsInt/CompCert/commit/93d2fc9e3b23d69c0c97d229f9fa4ab36079f507
+due to my report.
+
 ### Missing constant folding patterns for modulo
 
 ```
@@ -577,6 +587,9 @@ because, by the time the constant propagator runs, the modulo operation has
 been mangled into a complex call/multiply/subtract sequence that is
 inconvenient to recognize.
 
+Status: CompCert developers are (understandably) uninterested in this
+trivial issue.
+
 ### Failure to generate `movw` instruction
 
 ```
@@ -600,8 +613,8 @@ simplified to:
     movw r1, #506
 ```
 
-I have a patch at
-https://github.com/gergo-/CompCert/commit/8aa7b1ce3b0228232e027773752727f61b42a847.
+Fixed in a series of patches from me, merged at
+https://github.com/AbsInt/CompCert/commit/c4dcf7c08016f175ba6c06d20c530ebaaad67749.
 
 ### Failure to constant fold `mla`
 
@@ -631,8 +644,8 @@ rules:
     mla r2, r4, r0, r12
 ```
 
-I have a patch at
-https://github.com/gergo-/CompCert/commit/37e7fd10fdb737dc4b5c07ee2f14aeffa51a6d75.
+Fixed in a patch from me, merged at
+https://github.com/AbsInt/CompCert/commit/4f46e57884a909d2f62fa7cea58b3d933a6a5e58.
 
 ### Unnecessary spilling due to dead code
 
