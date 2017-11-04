@@ -27,6 +27,273 @@ list [on Reddit](https://www.reddit.com/r/programming/comments/6ylrpi/missed_opt
 and [on Hacker News](https://news.ycombinator.com/item?id=15187505).
 
 
+# Added 2017-11-04
+
+Unless noted otherwise, the examples below can be reproduced with the
+following compiler versions and configurations:
+
+Compiler | Version | Revision | Date | Configuration
+---------|---------|----------|------|--------------
+GCC      | 8.0.0 20171101 | r254306 | 2017-11-01 | `--target=armv7a-eabihf --with-arch=armv7-a --with-fpu=vfpv3-d16 --with-float-abi=hard --with-float=hard`
+Clang    | 6.0.0 (trunk 317088) | LLVM r317088, Clang r317076 | 2017-11-01 | `--target=armv7a-eabihf -march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=hard`
+CompCert | 3.1 | 0c00ace | 2017-10-26 | `armv7a-linux`
+
+## GCC
+
+### Two dead stores for type conversion
+
+Similar to a case below, but maybe more striking:
+```
+unsigned fn1(float p1, double p2) {
+  unsigned a = p2;
+  if (p1)
+    a = 8;
+  return a;
+}
+```
+
+GCC predicates the entire function, nicely moving the conversion of `p2` to
+`unsigned` into a branch. But for some reason, in both branches it spills
+the value for `a` to the stack, without ever reloading it:
+```
+    vcmp.f32    s0, #0
+    sub sp, sp, #8
+    vmrs    APSR_nzcv, FPSCR
+    vcvteq.u32.f64  s15, d1
+    movne   r3, #8
+    strne   r3, [sp, #4]
+    movne   r0, r3
+    vmoveq  r0, s15 @ int
+    vstreq.32   s15, [sp, #4]   @ int
+    add sp, sp, #8
+    @ sp needed
+    bx  lr
+```
+
+### Missed simplification of modulo-and
+
+```
+short fn1(int p1) {
+  signed a = (p1 % 4) & 1;
+  return a;
+}
+```
+
+GCC computes modulo 4 as bitwise-and 3, carefully handling the case where
+`p1` might be negative, then does the bitwise-and 1:
+```
+    rsbs    r3, r0, #0
+    and r0, r0, #3
+    and r3, r3, #3
+    rsbpl   r0, r3, #0
+    and r0, r0, #1
+```
+
+But the result of `(p1 % 4) & 1` is 1 iff `p1 % 4` is odd iff `p1` is odd
+iff `p1 & 1` is 1, so Clang just computes this directly:
+
+```
+    and r0, r0, #1
+```
+
+### Missed simplification of division in condition
+
+In the function:
+```
+char fn1(char p1) {
+  signed a = 4;
+  if (p1 / (p1 + 3))
+    a = 1;
+  return a;
+}
+```
+GCC misses the fact that the condition is always false because `p1 + 3` is
+always greater than `p1` (as `char` is unsigned on ARM), and generates code
+to evaluate it:
+```
+    add r1, r0, #3
+    bl  __aeabi_idiv
+    cmp r0, #0
+    moveq   r0, #4
+    movne   r0, #1
+```
+
+Clang returns 4 unconditionally.
+
+### Missed simplification/floating-point constant propagation?
+
+```
+float fn1(short p1) {
+  char a;
+  float b, c;
+  a = p1;
+  b = c = 765;
+  if (a == b)
+    c = 0;
+  return c;
+}
+```
+
+At the comparison `a == b`, `a` is a `char`, and it cannot hold a value that
+compares equal to `b`'s value of 765.
+
+GCC computes the comparison anyway, Clang returns 765.0f unconditionally.
+
+### Missed bitwise tricks
+
+```
+char fn1(short p1, int p2) {
+  long a;
+  int v;
+  a = p2 & (p1 | 415615);
+  v = a << 1;
+  return v;
+}
+```
+
+The least significant byte of 415615 is `0x7f`, so the lowest 7 bits of `a`
+are the same as the lowest 7 bits of `p2`, hence the lowest 8 bits of `v`
+are the same as the lowest 8 bits of `p2 << 1`, and that is all that is
+needed for the result. GCC generates all the operations present at the
+source level, while Clang simplifies nicely:
+```
+    lsl r0, r1, #1
+    uxtb    r0, r0
+```
+
+### Unnecessary spilling due to badly scheduled move-immediates
+
+This is just a much smaller example of an issue with the same title below.
+
+```
+long fn1(char p1, short p2, long p3, long p4, short p5, long p6) {
+  long a, b = 1000893;
+  a = 600 - p2 * 3;
+  if (p4 >= p5 * !(p6 * a))
+    b = p3;
+  return b;
+}
+```
+
+GCC loads the constant 1000893 into a register early on, causing it to spill
+a register, but only uses the value much later and conditionally:
+
+```
+    str lr, [sp, #-4]!      @ spill lr
+    movw    lr, #17853      @ move lower part of 1000893 into lr
+    ldr r1, [sp, #8]
+    movt    lr, 15          @ move upper part of 1000893 into lr
+    ...
+    cmp r1, r3
+    movle   r0, r2
+    movgt   r0, lr          @ use 1000893
+```
+
+Clang just loads the constant conditionally, at the point where it is
+actually needed, and avoids spilling:
+
+```
+    ...
+    movwgt  r2, #17853
+    movtgt  r2, #15
+    mov r0, r2
+```
+
+
+## Clang
+
+### Missed simplification of integer-valued floating-point arithmetic
+
+In some cases (see one further below), Clang can perform floating-point
+arithmetic in integers where the result is an exact integer; GCC doesn't
+usually do this. But here is a counterexample:
+
+```
+char fn1(char p1) {
+  float a;
+  short b;
+  a = !p1;
+  b = -a;
+  return b;
+}
+```
+
+Clang converts to `float`, negates, and converts back:
+```
+    vmov.f32    s2, #1.000000e+00
+    vldr    s0, .LCPI0_0        @ load 0.0
+    cmp r0, #0
+    vmoveq.f32  s0, s2
+    vneg.f32    s0, s0
+    vcvt.s32.f32    s0, s0
+    vmov    r0, s0
+```
+
+GCC doesn't:
+```
+    cmp r0, #0
+    moveq   r0, #255
+    movne   r0, #0
+```
+
+### Missed conditional constant propagation on `double`
+
+```
+short fn1(double p1) {
+  unsigned a = 4;
+  if (p1 == 604884)
+    if (0 * p1)
+      a = 7;
+  return a;
+}
+```
+
+If `p1` is 604884, then `0 * p1` is false. Clang evaluates both conditions,
+GCC returns 4 unconditionally.
+
+
+### Missed simplification of bitwise operations
+
+```
+float fn1(short p1) {
+  float a = 516.403544893f;
+  if (p1 & 6 >> (p1 & 31) ^ ~0)
+    a = 1;
+  return a;
+}
+```
+
+Clang evaluates the branch condition because it misses that `((p1 & (6 >>
+(p1 & 31))) ^ ~0)` is nonzero because almost all the bits of the inner
+expression are zero.
+
+
+## CompCert
+
+### Reluctance to select `mvn` instruction
+
+In this function:
+```
+int fn1(int p1) {
+  return -7 - p1;
+}
+```
+CompCert computes the subtraction by adding a sequence of large constants:
+```
+    rsb r0, r0, #249
+    add r0, r0, #65280
+    add r0, r0, #16711680
+    add r0, r0, #-16777216
+```
+
+It's simpler to synthesize the constant -7 as the negation of 6 and
+subtracting, as GCC does:
+```
+    mvn r3, #6
+    sub r0, r3, r0
+```
+
+
 # Added 2017-09-06
 
 Unless noted otherwise, the examples below can be reproduced with the
@@ -36,7 +303,7 @@ Compiler | Version | Revision | Date | Configuration
 ---------|---------|----------|------|--------------
 GCC      | 8.0.0 20170906 | r251801 | 2017-09-06 | `--target=armv7a-eabihf --with-arch=armv7-a --with-fpu=vfpv3-d16 --with-float-abi=hard --with-float=hard`
 Clang    | 6.0.0 (trunk 312637) | LLVM r312635, Clang r312634 | 2017-09-06 | `--target=armv7a-eabihf -march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=hard`
-CompCert | CompCert 3.0.1 | f3c60be | 2017-08-28 | `armv7a-linux`
+CompCert | 3.0.1 | f3c60be | 2017-08-28 | `armv7a-linux`
 
 ## GCC
 
