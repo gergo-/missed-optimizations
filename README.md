@@ -12,30 +12,31 @@ code. None of these are likely to affect the actual, measurable performance
 of real applications. Also, I have not measured most of these: The seemingly
 inefficient code may somehow turn out to be faster on real hardware.
 
-I have tested GCC, Clang, and CompCert, mostly targeting ARM at `-O3`.
+I have tested GCC, Clang, and CompCert, mostly targeting ARM at `-O3`. The
+exact versions tested are specified below. For each example, at least one of
+these three compilers (typically GCC or Clang) produces the "right" code.
+
+This list was put together by Gergö Barany <gergo.barany@inria.fr>. I'm
+interested in feedback.
+I have described how I found these missed optimizations in a [preprint
+(PDF)](missed_optimizations_preprint.pdf). The software described in the
+paper is not released yet.
+
+Since initial publication, there have been some insightful comments on this
+list [on Reddit](https://www.reddit.com/r/programming/comments/6ylrpi/missed_optimizations_in_c_compilers/)
+and [on Hacker News](https://news.ycombinator.com/item?id=15187505).
+
+
+# Added 2017-09-06
+
 Unless noted otherwise, the examples below can be reproduced with the
-following versions and configurations:
+following compiler versions and configurations:
 
 Compiler | Version | Revision | Date | Configuration
 ---------|---------|----------|------|--------------
 GCC      | 8.0.0 20170906 | r251801 | 2017-09-06 | `--target=armv7a-eabihf --with-arch=armv7-a --with-fpu=vfpv3-d16 --with-float-abi=hard --with-float=hard`
 Clang    | 6.0.0 (trunk 312637) | LLVM r312635, Clang r312634 | 2017-09-06 | `--target=armv7a-eabihf -march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=hard`
 CompCert | CompCert 3.0.1 | f3c60be | 2017-08-28 | `armv7a-linux`
-
-For each example, at least one of these three compilers (typically GCC or
-Clang) produces the "right" code.
-
-This list was put together by Gergö Barany <gergo.barany@inria.fr>. I'm
-interested in feedback.
-
-Since initial publication, there have been some insightful comments on this
-list [on Reddit](https://www.reddit.com/r/programming/comments/6ylrpi/missed_optimizations_in_c_compilers/)
-and [on Hacker News](https://news.ycombinator.com/item?id=15187505).
-
-I have described how I found these in a [preprint
-(PDF)](missed_optimizations_preprint.pdf). The software described in the
-paper is not released yet.
-
 
 ## GCC
 
