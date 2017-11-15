@@ -20,7 +20,8 @@ This list was put together by Gergö Barany <gergo.barany@inria.fr>. I'm
 interested in feedback.
 I have described how I found these missed optimizations in a [preprint
 (PDF)](missed_optimizations_preprint.pdf). The software described in the
-paper is not released yet.
+paper is not released yet. I also made a quick-and-dirty [poster
+(PDF)](missed_optimizations_poster.pdf).
 
 Since initial publication, there have been some insightful comments on this
 list [on Reddit](https://www.reddit.com/r/programming/comments/6ylrpi/missed_optimizations_in_c_compilers/)
