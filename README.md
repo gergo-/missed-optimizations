@@ -956,8 +956,8 @@ In the previous example, the copies for the arguments to the `mul` operation
 (`r0` to `r1`, then on to `r2`) are redundant. They could be removed, and
 the multiplication written as just `mul r1, r0, r0`.
 
-*Note:* This entry previously spoke of copy coalescing, but (Sebastian
-Hack)[http://compilers.cs.uni-saarland.de/people/hack/] pointed out that
+*Note:* This entry previously spoke of copy coalescing, but [Sebastian
+Hack](http://compilers.cs.uni-saarland.de/people/hack/) pointed out that
 it's actually copy propagation that is missed here.
 
 ### Failure to propagate folded constants
