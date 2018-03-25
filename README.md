@@ -96,12 +96,12 @@ before its value is reloaded into `d1` towards the end of the function:
     ... some computations omitted ...
     vmov.f64    d13, #4.000000e+00
     vmov.f64    d14, #1.000000e+01
-    vmul.f64    d10, d10, d13
-    vadd.f64    d11, d1, d14
+    vmul.f64    d10, d10, d13           @ last use of d13
+    vadd.f64    d11, d1, d14            @ last use of d14
     vmov.f64    d12, #2.000000e+00
     vmov.f64    d15, #8.000000e+00
     vsub.f64    d5, d12, d5
-    vadd.f64    d12, d2, d15
+    vadd.f64    d12, d2, d15            @ last use of d15
     vmls.f64    d10, d11, d9
     vstr    d6, [sp]                    @ spill original value of d6
     vmov.f64    d6, #6.000000e+00       @ use d6 for constant 6.0
