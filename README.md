@@ -18,9 +18,10 @@ these three compilers (typically GCC or Clang) produces the "right" code.
 
 This list was put together by Gergö Barany <gergo.barany@inria.fr>. I'm
 interested in feedback.
-I have described how I found these missed optimizations in a [preprint
-(PDF)](missed_optimizations_preprint.pdf). The software described in the
-paper is not released yet. I also made a quick-and-dirty [poster
+I have described how I found these missed optimizations in a [paper
+(PDF)](missed_optimizations_preprint.pdf) that I presented at CC'18, where
+it won the best paper award. The software described in the paper is not
+released yet. I also made a quick-and-dirty [poster
 (PDF)](missed_optimizations_poster.pdf) and some more informative
 [presentation slides (PDF)](cc2018slides.pdf).
 
