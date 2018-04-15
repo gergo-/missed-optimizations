@@ -135,6 +135,13 @@ load, and one instruction each to allocate and free the stack frame.  GCC
 generates fewer instructions overall, with lower register use and without
 this inline spill.
 
+Reported at https://bugs.llvm.org/show_bug.cgi?id=37073. It turns out that
+this is due to bad spilling decisions before register allocation that are
+not visible in the example above because they are undone by smart scheduling
+after register allocation. Can be fixed by selecting a different scheduler
+to run before allocation instead of the (bad) default choice.
+
+
 ### Excessive copying
 
 ```
@@ -175,6 +182,9 @@ could just use the values from `d3`.
     vmul.f64    d11, d8, d6
     vsub.f64    d12, d4, d4
 ```
+
+This seems to be related to scheduling as well; selecting a different
+scheduler with `-mllvm -pre-RA-sched=list-burr` makes it go away.
 
 
 # Added 2017-11-04
